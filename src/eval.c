@@ -2253,12 +2253,12 @@ DEFUN ("eval", Feval, Seval, 1, 1, 0,
   original_args = Fcdr (form);
 
   backtrace.next = backtrace_list;
-  backtrace_list = &backtrace;
   backtrace.function = &original_fun; /* This also protects them from gc */
   backtrace.args = &original_args;
   backtrace.nargs = UNEVALLED;
   backtrace.evalargs = 1;
   backtrace.debug_on_exit = 0;
+  backtrace_list = &backtrace;
 
   if (debug_on_next_call)
     do_debug_on_call (Qt);
@@ -2973,12 +2973,12 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
     }
 
   backtrace.next = backtrace_list;
-  backtrace_list = &backtrace;
   backtrace.function = &args[0];
   backtrace.args = &args[1];
   backtrace.nargs = nargs - 1;
   backtrace.evalargs = 0;
   backtrace.debug_on_exit = 0;
+  backtrace_list = &backtrace;
 
   if (debug_on_next_call)
     do_debug_on_call (Qlambda);
