@@ -54,6 +54,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "character.h"
 #include "syssignal.h"
 #include "termhooks.h"		/* For struct terminal.  */
+#include "profiler.h"
 #include <setjmp.h>
 
 /* GC_MALLOC_CHECK defined means perform validity checks of malloc'd
@@ -5080,6 +5081,10 @@ returns nil, because real GC can't be done.  */)
 
   BLOCK_INPUT;
 
+  /* Avoid sweeping stacktraces written to tmpfile for profiling */
+  profiler_block ();
+  profiler_read_data ();
+
   shrink_regexp_cache ();
 
   gc_in_progress = 1;
@@ -5200,6 +5205,7 @@ returns nil, because real GC can't be done.  */)
   dump_zombies ();
 #endif
 
+  profiler_unblock ();
   UNBLOCK_INPUT;
 
   CHECK_CONS_LIST ();
