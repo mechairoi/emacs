@@ -348,6 +348,7 @@ static void mark_terminals P_ ((void));
 extern void mark_kboards P_ ((void));
 extern void mark_ttys P_ ((void));
 extern void mark_backtrace P_ ((void));
+extern void mark_profile P_ ((void));
 static void gc_sweep P_ ((void));
 static void mark_glyph_matrix P_ ((struct glyph_matrix *));
 static void mark_face_cache P_ ((struct face_cache *));
@@ -5090,10 +5091,6 @@ returns nil, because real GC can't be done.  */)
 
   BLOCK_INPUT;
 
-  /* Avoid sweeping stacktraces written to tmpfile for profiling */
-  profiler_block ();
-  profiler_read_data ();
-
   shrink_regexp_cache ();
 
   gc_in_progress = 1;
@@ -5156,6 +5153,10 @@ returns nil, because real GC can't be done.  */)
 #if GC_MARK_STACK == GC_USE_GCPROS_CHECK_ZOMBIES
   mark_stack ();
 #endif
+
+  /* Avoid sweeping stacktraces written to tmpfile for profiling */
+  profiler_block ();
+  mark_profile ();
 
   /* Everything is now marked, except for the things that require special
      finalization, i.e. the undo_list.

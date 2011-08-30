@@ -98,7 +98,7 @@ profiler_handler (int signal, void *ctx)
       {
 	/* TODO */
       }
-    else if (write (profile_out, backlist->function, sizeof (Lisp_Object)) == -1)
+    else if (write (profile_out, backlist->function, sizeof (Lisp_Object *)) == -1)
       {
 	/* TODO */
 	return;
@@ -126,16 +126,13 @@ profiler_unblock (void)
   sigprocmask (SIG_UNBLOCK, &sigset_prof, NULL);
 }
 
-void
+static void
 profiler_read_data (void)
 {
-  register struct backtrace *backlist, *prev_backlist;
   register int i;
+  register Lisp_Object *funcs;
   int length, hash;
-  struct profiler_backtrace_entry *entry, *slot, *prev;
-  sigset_t sigset_prof;
-  Lisp_Object *funcs;
-  prev_backlist = NULL;
+  struct profiler_backtrace_entry *entry, *slot;
 
   if (profile_out == -1) return;
   lseek (profile_out, 0, SEEK_SET);
@@ -145,7 +142,7 @@ profiler_read_data (void)
       if (!funcs) break;
       if (!length) continue;
       if (read (profile_out, funcs, sizeof (Lisp_Object) * length)
-	  != sizeof (Lisp_Object) * length)
+	  != sizeof (Lisp_Object *) * length)
 	{
 	  xfree (funcs);
 	  break;
@@ -155,9 +152,7 @@ profiler_read_data (void)
       /* Calculate hash code of the entry
 	 and look up in the table.  */
       hash = profiler_backtrace_hash (funcs);
-      for (slot = prev = profiler_backtrace_table[hash];
-	   slot;
-	   prev = slot, slot = slot->next)
+      for (slot = profiler_backtrace_table[hash]; slot; slot = slot->next)
 	{
 	  if (profiler_backtrace_equal_p (slot->list, funcs))
 	    {
@@ -176,12 +171,9 @@ profiler_read_data (void)
 
       /* Not found. Register the entry to
 	 the slot or the table.  */
-      if (prev)
-	prev->next = entry;
-      else
-	profiler_backtrace_table[hash] = entry;
+      entry->next = profiler_backtrace_table[hash];
+      profiler_backtrace_table[hash] = entry;
       entry->count = 1;
-      entry->next = NULL;
     }
   fclose (profile_out_fp);
   profile_out = -1;
@@ -190,12 +182,33 @@ profiler_read_data (void)
   if (profile_out_fp) profile_out = fileno (profile_out_fp);
 }
 
+void
+mark_profile (void)
+{
+  register int i;
+  register Lisp_Object *list;
+  struct profiler_backtrace_entry *slot;
+
+  profiler_read_data ();
+  for (i = 0; i < PROFILER_BACKTRACE_TABLE_SIZE; i++)
+    {
+      slot = profiler_backtrace_table[i];
+      while (slot)
+        {
+          for (list = slot->list; !NILP (*list); list++)
+            mark_object (*list);
+          slot = slot->next;
+        }
+    }
+}
+
 DEFUN ("profiler-clear", Fprofiler_clear, Sprofiler_clear, 0, 0, "",
        doc: /* TODO */)
      ()
 {
   register int i;
 
+  profiler_block ();
   if (profile_out_fp)
     {
       fclose (profile_out_fp);
@@ -214,6 +227,7 @@ DEFUN ("profiler-clear", Fprofiler_clear, Sprofiler_clear, 0, 0, "",
         }
       profiler_backtrace_table[i] = NULL;
     }
+  profiler_unblock ();
 }
 
 DEFUN ("profiler-start", Fprofiler_start, Sprofiler_start, 0, 0, "",
@@ -224,8 +238,8 @@ DEFUN ("profiler-start", Fprofiler_start, Sprofiler_start, 0, 0, "",
   struct itimerval timer;
   EMACS_INT interval;
 
-  profiler_block ();
   Fprofiler_clear ();
+  profiler_block ();
   profile_out_fp = tmpfile ();
   if (profile_out_fp)
     profile_out = fileno (profile_out_fp);
@@ -248,7 +262,7 @@ DEFUN ("profiler-start", Fprofiler_start, Sprofiler_start, 0, 0, "",
 
   return Qt;
 }
-     
+
 DEFUN ("profiler-stop", Fprofiler_stop, Sprofiler_stop, 0, 0, "",
        doc: /* TODO */)
      ()
@@ -287,7 +301,7 @@ syms_of_profiler ()
 {
   DEFVAR_INT ("profiler-interval", &profiler_interval,
 	      doc: /* */);
-  
+
   defsubr (&Sprofiler_start);
   defsubr (&Sprofiler_stop);
   defsubr (&Sprofiler_clear);
