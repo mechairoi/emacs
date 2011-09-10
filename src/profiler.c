@@ -31,8 +31,8 @@ struct backtrace
 EMACS_INT profiler_interval = 100;
 
 static int profile_out = -1;
-static FILE* profile_out_fp = NULL;
-static struct profiler_backtrace_entry *profiler_backtrace_table[PROFILER_BACKTRACE_TABLE_SIZE];
+static FILE *profile_out_fp = NULL;
+static struct profiler_backtrace_entry *profiler_backtrace_table[PROFILER_BACKTRACE_TABLE_SIZE] = {0};
 
 struct profiler_backtrace_entry
 {
@@ -197,7 +197,7 @@ mark_profile (void)
       slot = profiler_backtrace_table[i];
       while (slot)
         {
-          for (list = slot->list; !NILP (*list); list++)
+          for (list = slot->list; *list && !NILP (*list); list++)
             mark_object (*list);
           slot = slot->next;
         }
