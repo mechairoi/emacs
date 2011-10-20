@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <unistd.h>
+#include <errno.h>
 
 #ifdef STDC_HEADERS
 #include <stddef.h>		/* For offsetof, used by PSEUDOVECSIZE. */
@@ -87,10 +88,13 @@ profiler_handler (int signal, void *ctx)
   for (backlist = backtrace_list, length = 0; backlist; backlist = backlist->next)
     if (!COMPILEDP (*backlist->function)) length++;
   if (!length) return;
-  if (profile_out == -1) return;
-  if (write (profile_out, &length, sizeof (int)) == -1)
+  if (profile_out < 0) return;
+  if (write (profile_out, &length, sizeof (int)) != sizeof (int))
     {
       /* TODO */
+      write (stderr, errno, sizeof(int));
+      write (stderr, '\n', sizeof(char));
+      profile_out = -2;
       return;
     }
   for (backlist = backtrace_list; backlist; backlist = backlist->next) {
@@ -98,9 +102,12 @@ profiler_handler (int signal, void *ctx)
       {
 	/* TODO */
       }
-    else if (write (profile_out, backlist->function, sizeof (Lisp_Object *)) == -1)
+    else if (write (profile_out, backlist->function, sizeof (Lisp_Object *)) != sizeof (Lisp_Object *))
       {
 	/* TODO */
+        write (stderr, errno, sizeof(int));
+        write (stderr, '\n', sizeof(char));
+        profile_out = -2;
 	return;
       }
   }
@@ -135,46 +142,51 @@ profiler_read_data (void)
   struct profiler_backtrace_entry *entry, *slot;
 
   if (profile_out == -1) return;
-  lseek (profile_out, 0, SEEK_SET);
-  while (read (profile_out, &length, sizeof (int)) == sizeof (int))
-    {
-      funcs = (Lisp_Object *) xmalloc ((length+1) * sizeof (Lisp_Object));
-      if (!funcs) break;
-      if (!length) continue;
-      if (read (profile_out, funcs, sizeof (Lisp_Object) * length)
-	  != sizeof (Lisp_Object) * length)
-	{
-	  xfree (funcs);
-	  break;
-	}
-      funcs[length] = Qnil;
+  if (profile_out != -2) {
+    lseek (profile_out, 0, SEEK_SET);
+    while (read (profile_out, &length, sizeof (int)) == sizeof (int))
+      {
+        if (!length) continue;
+        funcs = (Lisp_Object *) xmalloc ((length+1) * sizeof (Lisp_Object));
+        if (!funcs) break;
+        if (read (profile_out, funcs, sizeof (Lisp_Object) * length)
+            != sizeof (Lisp_Object) * length)
+          {
+            xfree (funcs);
+            break;
+          }
+        funcs[length] = Qnil;
 
-      /* Calculate hash code of the entry
-	 and look up in the table.  */
-      hash = profiler_backtrace_hash (funcs);
-      for (slot = profiler_backtrace_table[hash]; slot; slot = slot->next)
-	{
-	  if (profiler_backtrace_equal_p (slot->list, funcs))
-	    {
-	      slot->count++;
-	      xfree (funcs);
-	      funcs = NULL;
-	      break;
-	    }
-	}
-      if(!funcs) continue;
-      /* Make backtrace entry.  */
-      entry = (struct profiler_backtrace_entry *)
-	xmalloc (sizeof (struct profiler_backtrace_entry));
-      if (!entry) break;
-      entry->list = funcs;
+        /* Calculate hash code of the entry
+           and look up in the table.  */
+        hash = profiler_backtrace_hash (funcs);
+        for (slot = profiler_backtrace_table[hash]; slot; slot = slot->next)
+          {
+            if (profiler_backtrace_equal_p (slot->list, funcs))
+              {
+                slot->count++;
+                xfree (funcs);
+                funcs = NULL;
+                break;
+              }
+          }
+        if(!funcs) continue;
+        /* Make backtrace entry.  */
+        entry = (struct profiler_backtrace_entry *)
+          xmalloc (sizeof (struct profiler_backtrace_entry));
+        if (!entry) {
+          xfree (funcs);
+          break;
+        }
+        entry->list = funcs;
 
-      /* Not found. Register the entry to
-	 the slot or the table.  */
-      entry->next = profiler_backtrace_table[hash];
-      profiler_backtrace_table[hash] = entry;
-      entry->count = 1;
-    }
+        /* Not found. Register the entry to
+           the slot or the table.  */
+        entry->next = profiler_backtrace_table[hash];
+        profiler_backtrace_table[hash] = entry;
+        entry->count = 1;
+      }
+  }
   fclose (profile_out_fp);
   profile_out = -1;
 
