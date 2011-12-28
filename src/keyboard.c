@@ -43,7 +43,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "systime.h"
 #include "atimer.h"
 #include <errno.h>
-#include "profiler.h"
 
 #ifdef HAVE_GTK_AND_PTHREAD
 #include <pthread.h>
@@ -1666,11 +1665,11 @@ command_loop_1 ()
       Vthis_original_command = Qnil;
       Vthis_command_keys_shift_translated = Qnil;
 
-      profiler_block ();
+      sigblock (sigmask (SIGPROF));
       /* Read next key sequence; i gets its length.  */
       i = read_key_sequence (keybuf, sizeof keybuf / sizeof keybuf[0],
 			     Qnil, 0, 1, 1);
-      profiler_unblock ();
+      sigunblock (sigmask (SIGPROF));
 
       /* A filter may have run while we were reading the input.  */
       if (! FRAME_LIVE_P (XFRAME (selected_frame)))

@@ -13,11 +13,12 @@
 
 #undef HIDE_LISP_IMPLEMENTATION
 #include "lisp.h"
+#include "syssignal.h"
 
 struct backtrace
 {
-  struct backtrace *next;
-  Lisp_Object *function;
+  struct backtrace * volatile next;
+  Lisp_Object * volatile function;
   Lisp_Object *args;	/* Points to vector of args. */
   int nargs;		/* Length of vector.
 			   If nargs is UNEVALLED, args points to slot holding
@@ -31,7 +32,7 @@ struct backtrace
 
 EMACS_INT profiler_interval = 100;
 
-static int profile_out = -1;
+volatile static sig_atomic_t profile_out = -1;
 static FILE *profile_out_fp = NULL;
 static struct profiler_backtrace_entry *profiler_backtrace_table[PROFILER_BACKTRACE_TABLE_SIZE] = {0};
 
@@ -83,54 +84,56 @@ profiler_handler (int signal, void *ctx)
 {
   register struct backtrace *backlist;
   int length;
+  sigset_t old_mask;
 
+  sigprocmask(SIG_SETMASK, &full_mask, &old_mask);
+  if (profile_out < 0) goto finally;
   /* Calculate backtrace depth first.  */
   for (backlist = backtrace_list, length = 0; backlist; backlist = backlist->next)
-    if (!COMPILEDP (*backlist->function)) length++;
-  if (!length) return;
-  if (profile_out < 0) return;
+    if (!COMPILEDP (*backlist->function)
+//        && ( SYMBOLP((*backlist->function))
+//            || CONSP((*backlist->function)) )
+        )
+      length++;
+  if (!length) goto finally;
   if (write (profile_out, &length, sizeof (int)) != sizeof (int))
     {
       /* TODO */
-      write (stderr, errno, sizeof(int));
-      write (stderr, '\n', sizeof(char));
+      //write (stderr, errno, sizeof(int));
+      //write (stderr, '\n', sizeof(char));
       profile_out = -2;
-      return;
+      goto finally;
     }
-  for (backlist = backtrace_list; backlist; backlist = backlist->next) {
-    if (COMPILEDP (*backlist->function))
-      {
-	/* TODO */
-      }
-    else if (write (profile_out, backlist->function, sizeof (Lisp_Object *)) != sizeof (Lisp_Object *))
-      {
-	/* TODO */
-        write (stderr, errno, sizeof(int));
-        write (stderr, '\n', sizeof(char));
-        profile_out = -2;
-	return;
-      }
-  }
-}
-
-void
-profiler_block (void)
-{
-  sigset_t sigset_prof;
-
-  sigemptyset (&sigset_prof);
-  sigaddset (&sigset_prof, SIGPROF);
-  sigprocmask (SIG_BLOCK, &sigset_prof, NULL);
-}
-
-void
-profiler_unblock (void)
-{
-  sigset_t sigset_prof;
-
-  sigemptyset (&sigset_prof);
-  sigaddset (&sigset_prof, SIGPROF);
-  sigprocmask (SIG_UNBLOCK, &sigset_prof, NULL);
+  for (backlist = backtrace_list; backlist; backlist = backlist->next)
+    {
+      if (COMPILEDP (*backlist->function)
+//        || !SYMBOLP(*backlist->function)
+//        || !CONSP(*backlist->function)
+         )
+        {
+          /* TODO */
+        }
+      else if (write (profile_out, backlist->function, sizeof (Lisp_Object)) != sizeof (Lisp_Object))
+        {
+          /* TODO */
+          // write (stderr, errno, sizeof(int));
+          // write (stderr, '\n', sizeof(char));
+          profile_out = -2;
+          goto finally;
+        }
+      else
+        {
+          length--;
+        }
+    }
+  if (length != 0)
+    {
+      // write (stderr, length, sizeof(int));
+      // write (stderr, '\n', sizeof(char));
+      profile_out = -2;
+    }
+finally:
+  sigprocmask(SIG_SETMASK, &old_mask, NULL);
 }
 
 static void
@@ -222,7 +225,7 @@ DEFUN ("profiler-clear", Fprofiler_clear, Sprofiler_clear, 0, 0, "",
 {
   register int i;
 
-  profiler_block ();
+  sigblock (sigmask (SIGPROF));
   if (profile_out_fp)
     {
       fclose (profile_out_fp);
@@ -241,7 +244,7 @@ DEFUN ("profiler-clear", Fprofiler_clear, Sprofiler_clear, 0, 0, "",
         }
       profiler_backtrace_table[i] = NULL;
     }
-  profiler_unblock ();
+  sigunblock (sigmask (SIGPROF));
 }
 
 DEFUN ("profiler-start", Fprofiler_start, Sprofiler_start, 0, 0, "",
@@ -253,11 +256,11 @@ DEFUN ("profiler-start", Fprofiler_start, Sprofiler_start, 0, 0, "",
   EMACS_INT interval;
 
   Fprofiler_clear ();
-  profiler_block ();
+  sigblock (sigmask (SIGPROF));
   profile_out_fp = tmpfile ();
   if (profile_out_fp)
     profile_out = fileno (profile_out_fp);
-  profiler_unblock ();
+  sigunblock (sigmask (SIGPROF));
   if (!profile_out_fp) return Qnil;
 
   sa.sa_sigaction = profiler_handler;
@@ -290,9 +293,9 @@ DEFUN ("profiler-data", Fprofiler_data, Sprofiler_data, 0, 0, 0,
 {
   register int i;
   Lisp_Object data = Qnil;
-  profiler_block ();
+  sigblock (sigmask (SIGPROF));
   profiler_read_data ();
-  profiler_unblock ();
+  sigunblock (sigmask (SIGPROF));
   for (i = 0; i < PROFILER_BACKTRACE_TABLE_SIZE; i++)
     {
       struct profiler_backtrace_entry *slot = profiler_backtrace_table[i];

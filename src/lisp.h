@@ -1916,7 +1916,7 @@ struct catchtag
 };
 
 extern struct catchtag *catchlist;
-extern struct backtrace *backtrace_list;
+extern volatile struct backtrace *backtrace_list;
 
 extern Lisp_Object memory_signal_data;
 
