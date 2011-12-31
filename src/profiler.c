@@ -57,9 +57,9 @@ static int
 profiler_backtrace_equal_p (Lisp_Object *alist,
 			    Lisp_Object *blist)
 {
-  while (! NILP (*alist) || ! NILP (*blist))
+  while (!NILP (*alist) || !NILP (*blist))
     {
-      if (! EQ (*alist, *blist))
+      if (!EQ (*alist, *blist))
         return 0;
       alist++;
       blist++;
@@ -72,10 +72,11 @@ profiler_backtrace_print (struct profiler_backtrace_entry *entry)
 {
   register Lisp_Object *list;
 
-  for (list = entry->list; ! NILP (*list); list++){
-    Fprin1 (*list, Qnil);
-    write_string ("\n", -1);
-  }
+  for (list = entry->list; !NILP (*list); list++)
+    {
+      Fprin1 (*list, Qnil);
+      write_string ("\n", -1);
+    }
 }
 
 static void
@@ -248,17 +249,18 @@ DEFUN ("profiler-start", Fprofiler_start, Sprofiler_start, 0, 0, "",
 
   sa.sa_sigaction = profiler_handler;
   sa.sa_flags = SA_RESTART | SA_SIGINFO;
-  sigemptyset(&sa.sa_mask);
+  sigemptyset (&sa.sa_mask);
   sigaction (SIGPROF, &sa, NULL);
 
   timer.it_interval.tv_sec = 0;
   timer.it_interval.tv_usec = 1000000 / profiler_interval;
+
   timer.it_value = timer.it_interval;
   setitimer (ITIMER_PROF, &timer, 0);
 
   return Qt;
 }
-     
+
 DEFUN ("profiler-stop", Fprofiler_stop, Sprofiler_stop, 0, 0, "",
        doc: /* TODO */)
      ()
@@ -282,7 +284,7 @@ DEFUN ("profiler-data", Fprofiler_data, Sprofiler_data, 0, 0, "",
         {
           Lisp_Object backlist = Qnil;
           Lisp_Object *list = slot->list;
-          for (; ! NILP (*list); list++)
+          for (; !NILP (*list); list++)
             backlist = Fcons (*list, backlist);
           backlist = Fnreverse (backlist);
           data = Fcons (Fcons (backlist, make_number (slot->count)), data);
@@ -298,7 +300,7 @@ syms_of_profiler ()
 {
   DEFVAR_INT ("profiler-interval", &profiler_interval,
 	      doc: /* */);
-  
+
   defsubr (&Sprofiler_start);
   defsubr (&Sprofiler_stop);
   defsubr (&Sprofiler_clear);
