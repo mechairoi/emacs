@@ -344,6 +344,7 @@ static void mark_terminals P_ ((void));
 extern void mark_kboards P_ ((void));
 extern void mark_ttys P_ ((void));
 extern void mark_backtrace P_ ((void));
+extern void mark_profile P_ ((void));
 static void gc_sweep P_ ((void));
 static void mark_glyph_matrix P_ ((struct glyph_matrix *));
 static void mark_face_cache P_ ((struct face_cache *));
@@ -5140,6 +5141,9 @@ returns nil, because real GC can't be done.  */)
   mark_stack ();
 #endif
 
+  sigblock (sigmask (SIGPROF));
+  mark_profile ();
+
   /* Everything is now marked, except for the things that require special
      finalization, i.e. the undo_list.
      Look thru every buffer's undo list
@@ -5200,6 +5204,7 @@ returns nil, because real GC can't be done.  */)
   dump_zombies ();
 #endif
 
+  sigunblock (sigmask (SIGPROF));
   UNBLOCK_INPUT;
 
   CHECK_CONS_LIST ();

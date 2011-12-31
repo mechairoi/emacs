@@ -47,7 +47,7 @@ struct backtrace
   char debug_on_exit;
 };
 
-struct backtrace *backtrace_list;
+volatile struct backtrace *backtrace_list;
 
 struct catchtag *catchlist;
 
@@ -2219,7 +2219,7 @@ DEFUN ("eval", Feval, Seval, 1, 1, 0,
 {
   Lisp_Object fun, val, original_fun, original_args;
   Lisp_Object funcar;
-  struct backtrace backtrace;
+  volatile struct backtrace backtrace;
   struct gcpro gcpro1, gcpro2, gcpro3;
 
   if (handling_signal)
@@ -2953,7 +2953,7 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
   int numargs = nargs - 1;
   Lisp_Object lisp_numargs;
   Lisp_Object val;
-  struct backtrace backtrace;
+  volatile struct backtrace backtrace;
   register Lisp_Object *internal_args;
   register int i;
 
