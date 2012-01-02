@@ -587,6 +587,7 @@ obj=    dispnew.o frame.o scroll.o xdisp.o menu.o $(XMENU_OBJ) window.o \
 	process.o callproc.o \
 	region-cache.o sound.o atimer.o \
 	doprnt.o strftime.o intervals.o textprop.o composite.o md5.o \
+	profiler.o \
 	$(MSDOS_OBJ) $(MAC_OBJ) $(NS_OBJ) $(CYGWIN_OBJ) $(FONT_DRIVERS)
 
 /* Object files used on some machine or other.
@@ -1276,6 +1277,9 @@ xsmfns.o: xsmfns.c lisp.h $(config_h) systime.h sysselect.h termhooks.h xterm.h 
 xsettings.o: xterm.h xsettings.h lisp.h frame.h termhooks.h $(config_h) \
   dispextern.h keyboard.h systime.h coding.h composite.h blockinput.h atimer.h \
   termopts.h
+profiler.o: profiler.c frame.h window.h indent.h buffer.h $(config_h) termchar.h \
+  termopts.h disptab.h region-cache.h character.h category.h composite.h \
+  dispextern.h keyboard.h
 /* The files of Lisp proper */
 
 alloc.o: alloc.c process.h frame.h window.h buffer.h  puresize.h syssignal.h \

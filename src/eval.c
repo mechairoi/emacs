@@ -47,7 +47,7 @@ struct backtrace
   char debug_on_exit;
 };
 
-struct backtrace *backtrace_list;
+volatile struct backtrace *backtrace_list;
 
 struct catchtag *catchlist;
 
@@ -2219,7 +2219,7 @@ DEFUN ("eval", Feval, Seval, 1, 1, 0,
 {
   Lisp_Object fun, val, original_fun, original_args;
   Lisp_Object funcar;
-  struct backtrace backtrace;
+  volatile struct backtrace backtrace;
   struct gcpro gcpro1, gcpro2, gcpro3;
 
   if (handling_signal)
@@ -2253,12 +2253,12 @@ DEFUN ("eval", Feval, Seval, 1, 1, 0,
   original_args = XCDR (form);
 
   backtrace.next = backtrace_list;
-  backtrace_list = &backtrace;
   backtrace.function = &original_fun; /* This also protects them from gc */
   backtrace.args = &original_args;
   backtrace.nargs = UNEVALLED;
   backtrace.evalargs = 1;
   backtrace.debug_on_exit = 0;
+  backtrace_list = &backtrace;
 
   if (debug_on_next_call)
     do_debug_on_call (Qt);
@@ -2953,7 +2953,7 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
   int numargs = nargs - 1;
   Lisp_Object lisp_numargs;
   Lisp_Object val;
-  struct backtrace backtrace;
+  volatile struct backtrace backtrace;
   register Lisp_Object *internal_args;
   register int i;
 
@@ -2973,12 +2973,12 @@ usage: (funcall FUNCTION &rest ARGUMENTS)  */)
     }
 
   backtrace.next = backtrace_list;
-  backtrace_list = &backtrace;
   backtrace.function = &args[0];
   backtrace.args = &args[1];
   backtrace.nargs = nargs - 1;
   backtrace.evalargs = 0;
   backtrace.debug_on_exit = 0;
+  backtrace_list = &backtrace;
 
   if (debug_on_next_call)
     do_debug_on_call (Qlambda);

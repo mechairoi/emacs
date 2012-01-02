@@ -1916,7 +1916,7 @@ struct catchtag
 };
 
 extern struct catchtag *catchlist;
-extern struct backtrace *backtrace_list;
+extern volatile struct backtrace *backtrace_list;
 
 extern Lisp_Object memory_signal_data;
 
@@ -3419,6 +3419,9 @@ EXFUN (Fx_focus_frame, 1);
 EXFUN (Fclear_face_cache, 1);
 EXFUN (Fx_load_color_file, 1);
 extern void syms_of_xfaces P_ ((void));
+
+/* defined in profiler.c */
+extern void syms_of_profiler P_ ((void));
 
 #ifndef HAVE_GETLOADAVG
 /* Defined in getloadavg.c */
