@@ -130,7 +130,7 @@ Lisp_Object QCfoundry;
 static Lisp_Object QCadstyle, QCregistry;
 /* Symbols representing keys of font extra info.  */
 Lisp_Object QCspacing, QCdpi, QCscalable, QCotf, QClang, QCscript, QCavgwidth;
-Lisp_Object QCantialias, QCfont_entity;
+Lisp_Object QCantialias, QCfont_entity, QCletter_space;
 static Lisp_Object QCfc_unknown_spec;
 /* Symbols representing values of font spacing property.  */
 static Lisp_Object Qc, Qm, Qd;
@@ -5063,6 +5063,7 @@ syms_of_font (void)
   DEFSYM (QClang, ":lang");
   DEFSYM (QCscript, ":script");
   DEFSYM (QCantialias, ":antialias");
+  DEFSYM (QCletter_space, ":letter-space");
 
   DEFSYM (QCfoundry, ":foundry");
   DEFSYM (QCadstyle, ":adstyle");

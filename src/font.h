@@ -239,7 +239,7 @@ enum font_property_index
   ASET ((font), prop, make_number (font_style_to_value (prop, val, 1)))
 
 extern Lisp_Object QCspacing, QCdpi, QCscalable, QCotf, QClang, QCscript;
-extern Lisp_Object QCavgwidth, QCantialias, QCfont_entity;
+extern Lisp_Object QCavgwidth, QCantialias, QCfont_entity, QCletter_space;
 extern Lisp_Object Qp;
 
 

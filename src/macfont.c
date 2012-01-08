@@ -87,6 +87,7 @@ struct macfont_info
   unsigned spacing : 2;
   unsigned antialias : 2;
   unsigned color_bitmap_p : 1;
+  short letter_space;
 };
 
 /* Values for the `spacing' member in `struct macfont_info'.  */
@@ -546,6 +547,8 @@ macfont_glyph_extents (struct font *font, CGGlyph glyph,
     width = font->pixel_size;
   else
     width = cache->width_int;
+
+  width += macfont_info->letter_space;
 
   if (metrics)
     {
@@ -1997,6 +2000,10 @@ macfont_open (FRAME_PTR f, Lisp_Object entity, int pixel_size)
     macfont_info->color_bitmap_p = 1;
 #endif
 
+  val = assq_no_quit (QCletter_space, AREF (entity, FONT_EXTRA_INDEX));
+  macfont_info->letter_space =
+    (CONSP (val) && (INTEGERP (XCDR (val)))) ? XINT(XCDR (val)) : 0;
+
   glyph = macfont_get_glyph_for_character (font, ' ');
   if (glyph != kCGFontIndexInvalid)
     font->space_width = macfont_glyph_extents (font, glyph, NULL, NULL, 0);
@@ -2785,6 +2792,7 @@ static const char *const macfont_non_booleans[] = {
   ":lang",
   ":script",
   ":destination",
+  ":letter-space",
   NULL,
 };
 
