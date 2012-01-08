@@ -140,7 +140,7 @@ extern Lisp_Object QCheight, QCsize, QCname;
 Lisp_Object QCfoundry, QCadstyle, QCregistry;
 /* Symbols representing keys of font extra info.  */
 Lisp_Object QCspacing, QCdpi, QCscalable, QCotf, QClang, QCscript, QCavgwidth;
-Lisp_Object QCantialias, QCfont_entity, QCfc_unknown_spec;
+Lisp_Object QCantialias, QCfont_entity, QCfc_unknown_spec, QCletter_space;
 /* Symbols representing values of font spacing property.  */
 Lisp_Object Qc, Qm, Qp, Qd;
 /* Special ADSTYLE properties to avoid fonts used for Latin
@@ -5380,6 +5380,7 @@ syms_of_font ()
   DEFSYM (QClang, ":lang");
   DEFSYM (QCscript, ":script");
   DEFSYM (QCantialias, ":antialias");
+  DEFSYM (QCletter_space, ":letter-space");
 
   DEFSYM (QCfoundry, ":foundry");
   DEFSYM (QCadstyle, ":adstyle");
