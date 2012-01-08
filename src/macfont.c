@@ -2017,15 +2017,15 @@ macfont_open (f, entity, pixel_size)
 	   && (XINT (AREF (entity, FONT_SPACING_INDEX))
 	       == FONT_SPACING_SYNTHETIC_MONO))
     macfont_info->spacing = MACFONT_SPACING_SYNTHETIC_MONO;
-  if (macfont_info->synthetic_italic_p || macfont_info->synthetic_bold_p)
+  /* if (macfont_info->synthetic_italic_p || macfont_info->synthetic_bold_p)
     macfont_info->antialias = MACFONT_ANTIALIAS_ON;
   else
-    {
+    { */
       val = assq_no_quit (QCantialias, AREF (entity, FONT_EXTRA_INDEX));
       if (CONSP (val))
 	macfont_info->antialias =
 	  NILP (XCDR (val)) ? MACFONT_ANTIALIAS_OFF : MACFONT_ANTIALIAS_ON;
-    }
+  /*  } */
   macfont_info->color_bitmap_p = 0;
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
   if (sym_traits & kCTFontColorGlyphsTrait)
@@ -2220,6 +2220,7 @@ macfont_draw (s, from, to, x, y, with_background)
   CGContextRef context;
   int len = to - from;
   int i;
+  bool fake_bold = false;
 
   BLOCK_INPUT;
 
@@ -2276,14 +2277,29 @@ macfont_draw (s, from, to, x, y, with_background)
       CGContextScaleCTM (context, 1, -1);
       CG_SET_FILL_COLOR_WITH_GC_FOREGROUND (context, s->gc);
       if (macfont_info->synthetic_italic_p)
-	atfm = synthetic_italic_atfm;
+	{
+	  if (no_antialias_p)
+	    {
+	      fake_bold = true;
+	      atfm = CGAffineTransformIdentity;
+	    }
+	  else
+	    atfm = synthetic_italic_atfm;
+	}
       else
 	atfm = CGAffineTransformIdentity;
       if (macfont_info->synthetic_bold_p)
 	{
-	  CGContextSetTextDrawingMode (context, kCGTextFillStroke);
-	  CGContextSetLineWidth (context, synthetic_bold_factor * font_size);
-	  CG_SET_STROKE_COLOR_WITH_GC_FOREGROUND (context, s->gc);
+	  if (no_antialias_p)
+	    {
+	      fake_bold = true;
+	    }
+	  else
+	    {
+	      CGContextSetTextDrawingMode (context, kCGTextFillStroke);
+	      CGContextSetLineWidth (context, synthetic_bold_factor * font_size);
+	      CG_SET_STROKE_COLOR_WITH_GC_FOREGROUND (context, s->gc);
+	    }
 	}
       if (no_antialias_p)
 	CGContextSetShouldAntialias (context, false);
@@ -2319,6 +2335,12 @@ macfont_draw (s, from, to, x, y, with_background)
 	  /* The symbol CGContextShowGlyphsWithAdvances seems to exist
 	     even in Mac OS X 10.2.  */
 	  CGContextShowGlyphsWithAdvances (context, glyphs, advances, len);
+	  if (fake_bold)
+	    {
+	      /* If not anti-alised, draw one pixel to the right. */
+	      CGContextSetTextPosition (context, x + advance_delta + 1, -y);
+	      CGContextShowGlyphsWithAdvances(context, glyphs, advances, len);
+	    }
 	}
     }
 
