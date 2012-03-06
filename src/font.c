@@ -45,6 +45,10 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "w32term.h"
 #endif /* HAVE_NTGUI */
 
+#ifdef HAVE_MACGUI
+#include "macterm.h"
+#endif /* HAVE_MACGUI */
+
 #ifdef HAVE_NS
 #include "nsterm.h"
 #endif /* HAVE_NS */
@@ -164,7 +168,10 @@ static struct font_driver_list *font_driver_list;
 
 /* Creators of font-related Lisp object.  */
 
-static Lisp_Object
+#ifndef HAVE_MACGUI
+static
+#endif
+Lisp_Object
 font_make_spec (void)
 {
   Lisp_Object font_spec;
@@ -1446,8 +1453,16 @@ font_parse_fcname (char *name, Lisp_Object font)
         {
           struct font_driver_list *driver_list = font_driver_list;
           for ( ; driver_list; driver_list = driver_list->next)
-            if (driver_list->driver->filter_properties)
-              (*driver_list->driver->filter_properties) (font, extra_props);
+	    {
+#ifdef HAVE_MACGUI
+	      extern Lisp_Object macfont_driver_type;
+
+	      if (!EQ (macfont_driver_type, driver_list->driver->type))
+		continue;
+#endif
+	      if (driver_list->driver->filter_properties)
+		(*driver_list->driver->filter_properties) (font, extra_props);
+	    }
         }
 
     }
@@ -5202,6 +5217,9 @@ EMACS_FONT_LOG is set.  Otherwise, it is set to t.  */);
 #ifdef WINDOWSNT
   syms_of_w32font ();
 #endif	/* WINDOWSNT */
+#ifdef HAVE_MACGUI
+  syms_of_macfont ();
+#endif	/* HAVE_MACGUI */
 #ifdef HAVE_NS
   syms_of_nsfont ();
 #endif	/* HAVE_NS */
